@@ -1,0 +1,37 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# TypeScript Patterns & Conventions
+
+## Import Patterns
+- Use ES module imports with `.js` extensions for route files: `import route from './routes/route.js'`
+- Import types from external libraries: `import { Request, Response } from 'express'`
+- Use relative imports for internal modules: `import { embedText } from '../services/gemini.js'`
+
+## Type Definitions
+- Define interfaces for MongoDB documents: `interface IMemory extends Document`
+- Use explicit return types for async functions: `Promise<number[]>`
+- Type function parameters: `function chunkText(text: string, maxLength: number = 512): string[]`
+
+## Error Handling
+- Use try-catch blocks in route handlers
+- Return appropriate HTTP status codes: `res.status(400).json({ error: 'Message' })`
+- Log errors with console.error for debugging
+
+## MongoDB Patterns
+- Use Mongoose schemas with TypeScript generics: `Schema<IMemory>`
+- Define document interfaces extending `Document`
+- Use `insertMany()` for bulk operations
+- Use `aggregate()` with `$search` for vector operations
+
+## API Integration
+- Handle possible undefined values from external APIs
+- Use non-null assertion (`!`) for environment variables: `process.env.API_KEY!`
+- Throw descriptive errors when API calls fail
+
+## File Organization
+- Keep related functionality in dedicated directories
+- Use descriptive file names that match their purpose
+- Export default for main functionality, named exports for utilities

@@ -1,0 +1,15 @@
+Amina Yusuf, a renewable energy entrepreneur from ABU Zaria, runs SolarShed Energy in Kano. Her startup provides solar mini-grids and battery storage systems for rural schools and clinics across northern Nigeria.
+
+The company operates from No. 8, Unity Close, Bompai, Kano State. Amina founded SolarShed in 2020, after completing a master's degree in sustainable energy in Germany.
+
+Their top product is the "BrightPack" — a portable solar generator with USB ports, LED lamps, and a 50W solar panel. It is popular among students and traders in off-grid areas.
+
+SolarShed partners with UNICEF to power rural maternity wards and runs a pay-as-you-go model via a mobile USSD platform coded in Python and hosted on AWS Lambda.
+
+Her younger brother, Musa Yusuf, leads logistics and warehouse operations. Their biggest deployment so far powered 30 schools in Jigawa State.
+
+The BrightPack costs ₦35,000, with financing options available. The company slogan is "Powering dreams, one ray at a time."
+
+Amina regularly shares project updates on LinkedIn and organizes monthly demo sessions in local communities.
+
+Challenges include high import tariffs and limited local manufacturing, but Amina remains focused on clean, inclusive energy solutions for underserved areas

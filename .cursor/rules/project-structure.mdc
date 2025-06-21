@@ -1,0 +1,33 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# AI Agent API Project Structure
+
+This is a TypeScript-based AI agent API that uses Express, MongoDB with vector search, and Google Gemini API for text embedding and generation.
+
+## Project Layout
+- **Entry Point**: [src/server.ts](mdc:src/server.ts) - Main Express server setup
+- **Configuration**: [.env](mdc:.env) - Environment variables (MongoDB URI, Gemini API key, PORT)
+- **Package Config**: [package.json](mdc:package.json) - Dependencies and scripts
+- **TypeScript Config**: [tsconfig.json](mdc:tsconfig.json) - TypeScript compilation settings
+
+## Core Directories
+- `src/` - TypeScript source code
+  - `models/` - MongoDB schemas and interfaces
+  - `routes/` - Express route handlers
+  - `services/` - External API integrations (Gemini)
+  - `utils/` - Helper functions
+
+## Key Files
+- [src/models/Memory.ts](mdc:src/models/Memory.ts) - MongoDB schema for storing text embeddings
+- [src/services/gemini.ts](mdc:src/services/gemini.ts) - Google Gemini API integration
+- [src/routes/train.ts](mdc:src/routes/train.ts) - Training endpoint for storing text chunks
+- [src/routes/ask.ts](mdc:src/routes/ask.ts) - Question-answering endpoint with vector search
+- [src/utils/chunkText.ts](mdc:src/utils/chunkText.ts) - Text chunking utility
+
+## Development Commands
+- `npm run dev` - Run with ts-node (development)
+- `npm run build` - Compile TypeScript to JavaScript
+- `npm start` - Run compiled JavaScript (production)

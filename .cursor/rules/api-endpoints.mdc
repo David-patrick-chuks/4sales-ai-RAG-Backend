@@ -1,0 +1,67 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# API Endpoints Documentation
+
+## Training Endpoint
+**Route**: `POST /train`
+**File**: [src/routes/train.ts](mdc:src/routes/train.ts)
+
+**Purpose**: Store text chunks with embeddings for later retrieval
+
+**Request Body**:
+```json
+{
+  "userId": "string",
+  "text": "string"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "chunksStored": number
+}
+```
+
+**Process**:
+1. Validates userId and text presence
+2. Chunks text using [src/utils/chunkText.ts](mdc:src/utils/chunkText.ts)
+3. Generates embeddings via [src/services/gemini.ts](mdc:src/services/gemini.ts)
+4. Stores chunks in MongoDB using [src/models/Memory.ts](mdc:src/models/Memory.ts)
+
+## Question Endpoint
+**Route**: `POST /ask`
+**File**: [src/routes/ask.ts](mdc:src/routes/ask.ts)
+
+**Purpose**: Answer questions using vector search and AI generation
+
+**Request Body**:
+```json
+{
+  "userId": "string",
+  "question": "string"
+}
+```
+
+**Response**:
+```json
+{
+  "reply": "string"
+}
+```
+
+**Process**:
+1. Validates userId and question presence
+2. Embeds the question using Gemini API
+3. Performs vector search in MongoDB using `$search` with `knnBeta`
+4. Retrieves top 5 most similar text chunks
+5. Generates AI response using retrieved context
+
+## Error Responses
+Both endpoints return:
+- `400` for missing required fields
+- `500` for internal server errors with error logging
