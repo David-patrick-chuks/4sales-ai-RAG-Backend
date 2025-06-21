@@ -15,8 +15,13 @@ const startServer = async (): Promise<void> => {
     await connectDB();
 
     app.listen(PORT, () => {
-      console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-      console.log(`API documentation available at http://localhost:${PORT}/docs`);
+      console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+      console.log(`📍 Server URL: http://localhost:${PORT}`);
+      console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+      console.log(`📊 API status: http://localhost:${PORT}/api/status`);
+      console.log(`📚 API documentation: http://localhost:${PORT}/docs`);
+      console.log(`🔒 Sentry: https://sentry.io/organizations/chuteh/issues/`);
+      console.log(`⏰ Started at: ${new Date().toISOString()}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
