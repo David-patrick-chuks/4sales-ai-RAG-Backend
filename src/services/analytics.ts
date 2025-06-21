@@ -5,7 +5,7 @@ import {
     SimilarityHeatmap,
     SourceAnalytics,
     UnansweredQuery
-} from '../models/Analytics';
+} from '../models/Analytics.js';
 
 export class AnalyticsService {
   

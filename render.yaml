@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: ai-agent-api
+    env: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    buildCommand: ""  # No build command needed since Docker handles it
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGO_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY_1
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GEMINI_API_KEY_3
+        sync: false
+      - key: GEMINI_API_KEY_4
+        sync: false
+      - key: GEMINI_API_KEY_5
+        sync: false
+      - key: GEMINI_API_KEY_6
+        sync: false
+      - key: GEMINI_API_KEY_7
+        sync: false
+      - key: GEMINI_API_KEY_8
+        sync: false
+      - key: GEMINI_API_KEY_9
+        sync: false
+      - key: GEMINI_API_KEY_10
+        sync: false
+      - key: AGENT_API_TOKEN
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: 6379
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_DB
+        value: 0
+      - key: SENTRY_DSN
+        sync: false
+      - key: TRUST_PROXY
+        value: 1
+      - key: LOG_LEVEL
+        value: info
+    autoDeploy: true 

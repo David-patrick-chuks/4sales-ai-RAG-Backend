@@ -1,8 +1,8 @@
-import express from 'express';
-import { analyticsService } from '../services/analytics';
-import { sanitizeAgentId } from '../utils/security';
+import { Router } from 'express';
+import { analyticsService } from '../services/analytics.js';
+import { sanitizeAgentId } from '../utils/security.js';
 
-const router = express.Router();
+const router = Router();
 
 /**
  * @swagger

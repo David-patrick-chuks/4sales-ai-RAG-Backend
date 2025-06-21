@@ -1,7 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { ResponseAudit } from '../models/Analytics';
-import { WatchdogService } from '../services/watchdog';
-import { sanitizeAgentId } from '../utils/security';
+import { ResponseAudit } from '../models/Analytics.js';
+import { WatchdogService } from '../services/watchdog.js';
+import { sanitizeAgentId } from '../utils/security.js';
 
 const router = express.Router();
 

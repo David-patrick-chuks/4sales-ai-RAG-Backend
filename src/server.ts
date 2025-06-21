@@ -12,14 +12,14 @@ import mongoose from 'mongoose';
 import morgan from 'morgan';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import analyticsRoute from './routes/analytics';
-import askRoute from './routes/ask';
-import cacheRoute from './routes/cache';
-import feedbackRoute from './routes/feedback';
-import trainRoute from './routes/train';
-import watchdogRoute from './routes/watchdog';
-import { geminiService } from './services/gemini';
-import { SECURITY_CONFIG } from './utils/security';
+import analyticsRoute from './routes/analytics.js';
+import askRoute from './routes/ask.js';
+import cacheRoute from './routes/cache.js';
+import feedbackRoute from './routes/feedback.js';
+import trainRoute from './routes/train.js';
+import watchdogRoute from './routes/watchdog.js';
+import { geminiService } from './services/gemini.js';
+import { SECURITY_CONFIG } from './utils/security.js';
 
 // Load environment variables
 dotenv.config();

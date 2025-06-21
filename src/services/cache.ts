@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { embedText } from './gemini';
+import { embedText } from './gemini.js';
 
 // Redis client configuration
 const redis = new Redis({

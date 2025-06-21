@@ -1,6 +1,6 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { FeedbackService } from '../services/feedback';
-import { sanitizeAgentId, sanitizeQuestion } from '../utils/security';
+import { FeedbackService } from '../services/feedback.js';
+import { sanitizeAgentId, sanitizeQuestion } from '../utils/security.js';
 
 const router = express.Router();
 

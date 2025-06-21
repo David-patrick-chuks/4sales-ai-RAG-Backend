@@ -1,5 +1,5 @@
-import { ResponseAudit, IResponseAudit } from '../models/Analytics';
-import { generateReply } from './gemini';
+import { ResponseAudit, IResponseAudit } from '../models/Analytics.js';
+import { generateReply } from './gemini.js';
 
 export interface AuditResult {
   hallucinationRiskScore: number;

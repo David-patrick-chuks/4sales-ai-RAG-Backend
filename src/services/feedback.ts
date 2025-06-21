@@ -1,4 +1,4 @@
-import { RetrainingSuggestion, UserFeedback } from '../models/Analytics';
+import { RetrainingSuggestion, UserFeedback } from '../models/Analytics.js';
 
 export interface FeedbackAnalysis {
   userSatisfaction: 'positive' | 'negative' | 'neutral' | 'explicit_negative';

@@ -1,10 +1,10 @@
 import express, { NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
-import Memory, { IMemory } from '../models/Memory';
-import { analyticsService } from '../services/analytics';
-import { embedText, generateReply } from '../services/gemini';
-import { WatchdogService } from '../services/watchdog';
-import { sanitizeAgentId, sanitizeQuestion } from '../utils/security';
+import Memory, { IMemory } from '../models/Memory.js';
+import { analyticsService } from '../services/analytics.js';
+import { embedText, generateReply } from '../services/gemini.js';
+import { WatchdogService } from '../services/watchdog.js';
+import { sanitizeAgentId, sanitizeQuestion } from '../utils/security.js';
 
 const router = express.Router();
 

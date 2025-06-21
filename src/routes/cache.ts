@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { CacheService } from '../services/cache';
+import { CacheService } from '../services/cache.js';
 
 const router = express.Router();
 

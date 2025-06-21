@@ -1,16 +1,16 @@
 import express, { NextFunction, Request, Response } from 'express';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-import Memory, { IMemory } from '../models/Memory';
-import TrainJob from '../models/TrainJob';
-import { embedText } from '../services/gemini';
-import { GeminiAudioTranscriber } from '../utils/audioTranscribe';
-import { chunkText, generateContentHash, getContentVersion } from '../utils/chunkText';
-import { parseFile } from '../utils/parseFile';
-import { scrapeAllRoutes } from '../utils/scrapeWebsite';
-import { sanitizeRequest, SECURITY_CONFIG, validateFileUpload } from '../utils/security';
-import { VideoProcessor } from '../utils/videoProcess';
-import { cleanTranscript, fetchYouTubeTranscript, summarizeYouTubeVideoWithGemini } from '../utils/youtubeTranscript';
+import Memory, { IMemory } from '../models/Memory.js';
+import TrainJob from '../models/TrainJob.js';
+import { embedText } from '../services/gemini.js';
+import { GeminiAudioTranscriber } from '../utils/audioTranscribe.js';
+import { chunkText, generateContentHash, getContentVersion } from '../utils/chunkText.js';
+import { parseFile } from '../utils/parseFile.js';
+import { scrapeAllRoutes } from '../utils/scrapeWebsite.js';
+import { sanitizeRequest, SECURITY_CONFIG, validateFileUpload } from '../utils/security.js';
+import { VideoProcessor } from '../utils/videoProcess.js';
+import { cleanTranscript, fetchYouTubeTranscript, summarizeYouTubeVideoWithGemini } from '../utils/youtubeTranscript.js';
 
 const router = express.Router();
 
