@@ -1,4 +1,5 @@
 import express, { NextFunction, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Memory, { IMemory } from '../models/Memory';
 import { analyticsService } from '../services/analytics';
 import { embedText, generateReply } from '../services/gemini';
@@ -15,6 +16,101 @@ const RETRIEVAL_CONFIG = {
   MAX_CONTEXT_LENGTH: 4000, // Reduced context length for better focus
   CONFIDENCE_THRESHOLD: 0.4, // Lowered from 0.6 to be more lenient
   MAX_CHUNKS: 5 // Maximum chunks to include in context
+};
+
+// Agent metadata interface
+interface AgentMetadata {
+  name?: string;
+  tone?: string;
+  role?: string;
+  do_not_answer_from_general_knowledge?: boolean;
+}
+
+// Helper function to get agent metadata from the agents database
+const getAgentMetadata = async (agentId: string): Promise<AgentMetadata | null> => {
+  try {
+    // Connect to the agents database (same MongoDB cluster, different database)
+    const agentsDb = mongoose.connection.useDb('agents');
+    const Agent = agentsDb.model('Agent', new mongoose.Schema({
+      name: String,
+      tone: String,
+      role: String,
+      do_not_answer_from_general_knowledge: Boolean
+    }));
+
+    const agent = await Agent.findOne({ _id: agentId }).lean();
+    return agent as AgentMetadata | null;
+  } catch (error) {
+    console.warn(`⚠️ Failed to fetch agent metadata for ${agentId}:`, error);
+    return null;
+  }
+};
+
+// Helper function to extract keywords from question
+const extractKeywords = (question: string): string[] => {
+  // Simple keyword extraction - remove common words and punctuation
+  const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'what', 'when', 'where', 'why', 'how', 'who', 'which', 'that', 'this', 'these', 'those']);
+  
+  return question
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.has(word))
+    .slice(0, 5); // Limit to top 5 keywords
+};
+
+// Helper function to calculate cosine similarity
+const calculateCosineSimilarity = (vec1: number[], vec2: number[]): number => {
+  if (vec1.length !== vec2.length) return 0;
+  
+  let dotProduct = 0;
+  let norm1 = 0;
+  let norm2 = 0;
+  
+  for (let i = 0; i < vec1.length; i++) {
+    dotProduct += vec1[i] * vec2[i];
+    norm1 += vec1[i] * vec1[i];
+    norm2 += vec2[i] * vec2[i];
+  }
+  
+  if (norm1 === 0 || norm2 === 0) return 0;
+  
+  return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
+};
+
+// Helper function to filter and rank results
+const filterAndRankResults = (results: any[], question: string, questionVector: number[]): any[] => {
+  return results
+    .map(result => {
+      // Calculate similarity score if embedding exists
+      let similarity = 0;
+      if (result.embedding && Array.isArray(result.embedding)) {
+        similarity = calculateCosineSimilarity(questionVector, result.embedding);
+      }
+      
+      // Calculate confidence based on similarity and other factors
+      let confidence = similarity;
+      
+      // Boost confidence for keyword matches
+      const keywords = extractKeywords(question);
+      const textLower = result.text.toLowerCase();
+      const keywordMatches = keywords.filter(keyword => textLower.includes(keyword)).length;
+      if (keywordMatches > 0) {
+        confidence += (keywordMatches / keywords.length) * 0.2;
+      }
+      
+      return {
+        ...result,
+        similarity,
+        confidence: Math.min(confidence, 1) // Cap at 1.0
+      };
+    })
+    .filter(result => 
+      result.confidence >= RETRIEVAL_CONFIG.CONFIDENCE_THRESHOLD &&
+      result.similarity >= RETRIEVAL_CONFIG.MIN_SIMILARITY_SCORE
+    )
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, RETRIEVAL_CONFIG.MAX_CHUNKS);
 };
 
 // Input validation middleware with security
@@ -135,6 +231,36 @@ const validateAskRequest = (req: Request, res: Response, next: NextFunction) => 
  *                       type: number
  *                       format: float
  *                       description: Average similarity score of used chunks
+ *                 question_id:
+ *                   type: string
+ *                   description: Unique identifier for the question
+ *                 agent_metadata:
+ *                   type: object
+ *                   nullable: true
+ *                   description: Agent metadata from the agents database
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       description: Agent name
+ *                       example: "Sales Assistant"
+ *                     role:
+ *                       type: string
+ *                       description: Agent role/function
+ *                       example: "Fashion store assistant"
+ *                     tone:
+ *                       type: string
+ *                       description: Communication tone
+ *                       example: "friendly"
+ *                     do_not_answer_from_general_knowledge:
+ *                       type: boolean
+ *                       description: Whether to use only trained knowledge
+ *                       example: true
+ *                 feedback_prompt:
+ *                   type: string
+ *                   description: Prompt for user feedback
+ *                 retraining_suggested:
+ *                   type: boolean
+ *                   description: Whether retraining is suggested
  *       400:
  *         description: Invalid request parameters
  *         content:
@@ -194,6 +320,19 @@ router.post('/', validateAskRequest, async (req: Request, res: Response) => {
     const { agentId, question } = req.body;
     
     console.log(`🔍 Processing question for agent ${agentId}: "${question}"`);
+
+    // Get agent metadata for context-aware responses
+    let agentMetadata: AgentMetadata | null = null;
+    try {
+      agentMetadata = await getAgentMetadata(agentId);
+      if (agentMetadata) {
+        console.log(`👤 Agent metadata loaded: ${agentMetadata.name} (${agentMetadata.role}) - Tone: ${agentMetadata.tone}`);
+      } else {
+        console.log(`⚠️ No agent metadata found for ${agentId}`);
+      }
+    } catch (metadataError) {
+      console.warn('⚠️ Failed to load agent metadata:', metadataError);
+    }
 
     // Generate embedding for the question
     let questionVector: number[];
@@ -314,13 +453,13 @@ router.post('/', validateAskRequest, async (req: Request, res: Response) => {
     console.log(`📊 Filtered to ${filteredResults.length} high-confidence results`);
 
     // Deduplicate and build context
-    const uniqueTexts = Array.from(new Set(filteredResults.map(r => r.text)));
+    const uniqueTexts = Array.from(new Set(filteredResults.map((r: any) => r.text)));
     let context = uniqueTexts.join('\n\n');
 
     // Collect source information for the chunks used
     const sourcesUsed = filteredResults
-      .filter(r => uniqueTexts.includes(r.text))
-      .map(r => ({
+      .filter((r: any) => uniqueTexts.includes(r.text))
+      .map((r: any) => ({
         source: r.source,
         sourceUrl: r.sourceUrl,
         sourceMetadata: r.sourceMetadata,
@@ -328,8 +467,8 @@ router.post('/', validateAskRequest, async (req: Request, res: Response) => {
         confidence: r.confidence,
         similarity: r.similarity
       }))
-      .filter((source, index, self) => 
-        index === self.findIndex(s => s.source === source.source && s.sourceUrl === source.sourceUrl)
+      .filter((source: any, index: number, self: any[]) => 
+        index === self.findIndex((s: any) => s.source === source.source && s.sourceUrl === source.sourceUrl)
       );
 
     // Limit context size for better focus
@@ -386,10 +525,27 @@ router.post('/', validateAskRequest, async (req: Request, res: Response) => {
     }
 
     console.log(`📝 Sending ${uniqueTexts.length} chunks to Gemini (${context.length} chars)`);
-    console.log(`📚 Sources used: ${sourcesUsed.map(s => `${s.source} (sim: ${s.similarity?.toFixed(3)}, conf: ${s.confidence?.toFixed(3)})`).join(', ')}`);
+    console.log(`📚 Sources used: ${sourcesUsed.map((s: any) => `${s.source} (sim: ${s.similarity?.toFixed(3)}, conf: ${s.confidence?.toFixed(3)})`).join(', ')}`);
+    
+    // Build agent context for the prompt
+    let agentContext = '';
+    if (agentMetadata) {
+      agentContext = `
+Agent Information:
+- Name: ${agentMetadata.name || 'Unknown'}
+- Role: ${agentMetadata.role || 'AI Assistant'}
+- Tone: ${agentMetadata.tone || 'professional'}
+- Use only trained knowledge: ${agentMetadata.do_not_answer_from_general_knowledge ? 'Yes' : 'No'}
+
+`;
+    }
     
     const prompt = `
-You are an expert assistant. Use ONLY the context below to answer the question. If the answer is present, provide it clearly and accurately. If the information is not in the context, reply: "I don't have information about that in my training data."
+You are ${agentMetadata?.name || 'an expert assistant'} with the role of ${agentMetadata?.role || 'an AI assistant'}.
+
+${agentContext}${agentMetadata?.do_not_answer_from_general_knowledge ? 'IMPORTANT: Use ONLY the context below to answer the question. Do NOT use any general knowledge outside of the provided context.' : 'Use the context below to answer the question. You may supplement with general knowledge if needed.'}
+
+${agentMetadata?.tone ? `Respond in a ${agentMetadata.tone} tone.` : ''}
 
 Context:
 ${context}
@@ -412,7 +568,7 @@ Answer:`;
     
     // Calculate overall confidence score
     const overallConfidence = filteredResults.length > 0 
-      ? filteredResults.reduce((sum, r) => sum + r.confidence, 0) / filteredResults.length
+      ? filteredResults.reduce((sum: number, r: any) => sum + r.confidence, 0) / filteredResults.length
       : 0;
     
     // Determine if fallback was used
@@ -421,12 +577,12 @@ Answer:`;
     
     // Calculate average similarity
     const averageSimilarity = filteredResults.length > 0 
-      ? filteredResults.reduce((sum, r) => sum + (r.similarity || 0), 0) / filteredResults.length
+      ? filteredResults.reduce((sum: number, r: any) => sum + (r.similarity || 0), 0) / filteredResults.length
       : 0;
 
     // Track analytics for successful query
     const tokensUsed = Math.ceil(context.length / 4) + Math.ceil(question.length / 4) + Math.ceil(reply.length / 4);
-    const sources = sourcesUsed.map(s => s.sourceUrl || s.source).filter(Boolean);
+    const sources = sourcesUsed.map((s: any) => s.sourceUrl || s.source).filter(Boolean);
     
     await analyticsService.trackQuestion(
       agentId,
@@ -471,6 +627,12 @@ Answer:`;
       confidence: parseFloat(overallConfidence.toFixed(3)),
       fallback_used: fallbackUsed,
       question_id: questionId,
+      agent_metadata: agentMetadata ? {
+        name: agentMetadata.name,
+        role: agentMetadata.role,
+        tone: agentMetadata.tone,
+        do_not_answer_from_general_knowledge: agentMetadata.do_not_answer_from_general_knowledge
+      } : null,
       feedback_prompt: overallConfidence < 0.6 ? 
         "Was this answer helpful? Reply with feedback to help us improve." : 
         "How was this answer? (optional feedback)",
@@ -503,7 +665,7 @@ Answer:`;
           confidence_threshold: RETRIEVAL_CONFIG.CONFIDENCE_THRESHOLD,
           max_chunks: RETRIEVAL_CONFIG.MAX_CHUNKS
         },
-        sources: sourcesUsed.map(s => ({
+        sources: sourcesUsed.map((s: any) => ({
           source: s.source,
           source_url: s.sourceUrl,
           chunk_index: s.chunkIndex,
