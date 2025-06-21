@@ -166,7 +166,56 @@ app.use(express.urlencoded({
   parameterLimit: 100
 }));
 
-// Health check
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Check the health status of the API server and its dependencies
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "OK"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 uptime:
+ *                   type: number
+ *                   description: Server uptime in seconds
+ *                 environment:
+ *                   type: string
+ *                   example: "production"
+ *                 version:
+ *                   type: string
+ *                   example: "1.0.0"
+ *                 memory:
+ *                   type: object
+ *                   properties:
+ *                     rss:
+ *                       type: number
+ *                       description: Resident Set Size in bytes
+ *                     heapTotal:
+ *                       type: number
+ *                       description: Total heap size in bytes
+ *                     heapUsed:
+ *                       type: number
+ *                       description: Used heap size in bytes
+ *                 database:
+ *                   type: string
+ *                   example: "connected"
+ *                   description: Database connection status
+ *                 gemini:
+ *                   type: object
+ *                   description: Gemini service status
+ */
 app.get('/health', (req: Request, res: Response) => {
   const healthCheck = {
     status: 'OK',
@@ -182,21 +231,103 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(statusCode).json(healthCheck);
 });
 
-// API status
+/**
+ * @swagger
+ * /api/status:
+ *   get:
+ *     summary: API status endpoint
+ *     description: Get the current status and information about the 4SalesAI RAG API
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: API status information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "operational"
+ *                 service:
+ *                   type: string
+ *                   example: "4SalesAI RAG API"
+ *                 version:
+ *                   type: string
+ *                   example: "1.0.0"
+ *                 environment:
+ *                   type: string
+ *                   example: "production"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 app.get('/api/status', (req: Request, res: Response) => {
   res.json({
     status: 'operational',
-    service: 'AI Agent API',
+    service: '4SalesAI RAG API',
     version: process.env.npm_package_version || '1.0.0',
     environment: NODE_ENV,
     timestamp: new Date().toISOString()
   });
 });
 
-// Root endpoint
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: API root endpoint
+ *     description: Get information about the 4SalesAI RAG API and available endpoints
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: API information and available endpoints
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "4SalesAI RAG API"
+ *                 version:
+ *                   type: string
+ *                   example: "1.0.0"
+ *                 endpoints:
+ *                   type: object
+ *                   properties:
+ *                     health:
+ *                       type: string
+ *                       example: "/health"
+ *                       description: Health check endpoint
+ *                     status:
+ *                       type: string
+ *                       example: "/api/status"
+ *                       description: API status endpoint
+ *                     train:
+ *                       type: string
+ *                       example: "/api/train"
+ *                       description: Training endpoint for RAG models
+ *                     ask:
+ *                       type: string
+ *                       example: "/api/ask"
+ *                       description: Question answering endpoint
+ *                     analytics:
+ *                       type: string
+ *                       example: "/api/analytics"
+ *                       description: Analytics and metrics endpoint
+ *                     feedback:
+ *                       type: string
+ *                       example: "/api/feedback"
+ *                       description: User feedback submission endpoint
+ *                 documentation:
+ *                   type: string
+ *                   example: "/docs"
+ *                   description: Swagger API documentation
+ */
 app.get('/', (req: Request, res: Response) => {
   res.json({
-    message: 'AI Agent API',
+    message: '4SalesAI RAG API',
     version: process.env.npm_package_version || '1.0.0',
     endpoints: {
       health: '/health',
@@ -215,9 +346,9 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'AI Agent API',
+      title: '4SalesAI RAG API',
       version: '1.0.0',
-      description: 'API for AI Agent with Gemini integration, caching, and analytics',
+      description: 'Production-ready AI Agent API with RAG capabilities using...',
       contact: {
         name: 'API Support',
         url: 'https://www.4salesai.com'
@@ -238,7 +369,7 @@ const swaggerOptions = {
     },
     security: [{ bearerAuth: [] }]
   },
-  apis: ['./src/routes/*.ts', './src/config/*.ts', './src/server.ts']
+  apis: ['./src/routes/*.ts', './src/config/*.ts', './src/server.ts', './src/app.ts']
 };
 const specs = swaggerJsdoc(swaggerOptions);
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
@@ -254,7 +385,25 @@ app.use('/api/feedback', feedbackLimiter, feedbackRoute);
 app.use('/api/watchdog', watchdogLimiter, watchdogRoute);
 app.use('/api/cache', cacheRoute);
 
-// Debug Sentry endpoint
+/**
+ * @swagger
+ * /debug-sentry:
+ *   get:
+ *     summary: Debug Sentry endpoint
+ *     description: Test endpoint to verify Sentry error monitoring is working correctly
+ *     tags: [System]
+ *     responses:
+ *       500:
+ *         description: Intentionally throws an error for Sentry testing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "My first Sentry error!"
+ */
 app.get('/debug-sentry', function mainHandler(req, res) {
   throw new Error('My first Sentry error!');
 });
