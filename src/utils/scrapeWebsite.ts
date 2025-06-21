@@ -70,7 +70,7 @@ async function scrapeAndCleanContent(url: string): Promise<string> {
     
     debugLog('Setting up request interception...');
     await page.setRequestInterception(true);
-    page.on('request', (req) => {
+    page.on('request', (req: any) => {
       if (["image", "stylesheet", "font"].includes(req.resourceType())) {
         debugLog(`Blocking resource: ${req.resourceType()} - ${req.url().substring(0, 100)}...`);
         req.abort();
