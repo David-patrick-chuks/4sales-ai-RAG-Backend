@@ -320,8 +320,8 @@ function isImportantRoute(url: string, baseUrl: string): boolean {
   }
 }
 
-export async function scrapeAllRoutes(baseUrl: string): Promise<string | { error: string; source: string }> {
-  debugLog(`Starting scrapeAllRoutes for base URL: ${baseUrl}`);
+export async function scrapeAllRoutes(baseUrl: string, options?: { firstRouteOnly?: boolean }): Promise<string | { error: string; source: string }> {
+  debugLog(`Starting scrapeAllRoutes for base URL: ${baseUrl}${options?.firstRouteOnly ? ' (first route only)' : ''}`);
   try {
     if (!baseUrl || typeof baseUrl !== 'string' || baseUrl.trim() === '') {
       debugLog('Invalid baseUrl: empty or not a string');
@@ -336,6 +336,29 @@ export async function scrapeAllRoutes(baseUrl: string): Promise<string | { error
       throw new Error('Invalid URL format');
     }
 
+    // If firstRouteOnly is true, just scrape the base URL
+    if (options?.firstRouteOnly) {
+      debugLog('First route only mode: scraping only the base URL');
+      try {
+        const cleanedContent = await scrapeAndCleanContent(baseUrl);
+        if (!cleanedContent || cleanedContent.trim() === '') {
+          debugLog('No content scraped from base URL');
+          throw new Error('No content scraped from base URL');
+        }
+        debugLog('First route scraping completed successfully');
+        console.log('[DEBUG] First route content:', cleanedContent.substring(0, 500) + '...');
+        return cleanedContent.trim();
+      } catch (error: any) {
+        debugLog(`Error scraping first route ${baseUrl}: ${error.message}`, { 
+          stack: error.stack,
+          baseUrl: baseUrl 
+        });
+        console.error(`Error scraping first route ${baseUrl}: ${error.message}`);
+        return { error: error.message, source: 'website' };
+      }
+    }
+
+    // Original full crawling logic
     const visitedLinks = new Set<string>();
     const linksToVisit: string[] = [baseUrl];
     let combinedContent = '';

@@ -9,7 +9,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "test": "node test-api.js",
+    "test": "node test/test-all-apis.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "clean": "node -e \"if (require('fs').existsSync('dist')) require('fs').rmSync('dist', { recursive: true, force: true })\"",

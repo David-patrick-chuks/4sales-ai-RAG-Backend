@@ -32,16 +32,19 @@ const getAgentMetadata = async (agentId: string): Promise<AgentMetadata | null> 
     // Connect to the agents database (same MongoDB cluster, different database)
     const agentsDb = mongoose.connection.useDb('agents');
     const Agent = agentsDb.model('Agent', new mongoose.Schema({
+      agentId: String,
       name: String,
       tone: String,
       role: String,
       do_not_answer_from_general_knowledge: Boolean
     }));
 
-    const agent = await Agent.findOne({ _id: agentId }).lean();
+    // Try to find agent by agentId field
+    const agent = await Agent.findOne({ agentId: agentId }).lean();
     return agent as AgentMetadata | null;
   } catch (error) {
-    console.warn(`⚠️ Failed to fetch agent metadata for ${agentId}:`, error);
+    // This is expected for test agents that don't have metadata
+    console.warn(`⚠️ No agent metadata found for ${agentId}:`, error.message);
     return null;
   }
 };

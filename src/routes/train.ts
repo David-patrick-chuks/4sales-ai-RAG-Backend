@@ -122,7 +122,7 @@ async function processTrainingJob(jobId: string, jobData: any) {
 
     // Website scraping support
     if (source === 'website' && sourceUrl) {
-      const websiteResult = await scrapeAllRoutes(sourceUrl);
+      const websiteResult = await scrapeAllRoutes(sourceUrl, { firstRouteOnly: true } );
       console.log('[DEBUG] Website result:', websiteResult);
       if (typeof websiteResult === 'string') {
         trainingText = websiteResult;
@@ -148,6 +148,7 @@ async function processTrainingJob(jobId: string, jobData: any) {
             console.log(`Used Gemini to summarize YouTube video for training: ${sourceUrl}`);
           } catch (geminiError: any) {
             await TrainJob.findOneAndUpdate({ jobId }, { status: 'failed', error: { error: geminiError.message, source: 'youtube-gemini', url: sourceUrl } });
+            console.log(`Failed to summarize YouTube video with Gemini: ${geminiError.message}`);
             return;
           }
         } else {
