@@ -44,7 +44,8 @@ const getAgentMetadata = async (agentId: string): Promise<AgentMetadata | null> 
     return agent as AgentMetadata | null;
   } catch (error) {
     // This is expected for test agents that don't have metadata
-    console.warn(`⚠️ No agent metadata found for ${agentId}:`, error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`⚠️ No agent metadata found for ${agentId}:`, errorMessage);
     return null;
   }
 };
