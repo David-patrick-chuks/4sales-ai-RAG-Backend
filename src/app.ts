@@ -143,6 +143,45 @@ if (NODE_ENV === 'production') {
   app.use(morgan('dev'));
 }
 
+// Enhanced request logging middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+  
+  // Skip detailed logging for repeated GET requests to root (likely browser auto-refresh)
+  const isRepeatedRootGet = req.method === 'GET' && req.originalUrl === '/' && req.headers['user-agent']?.includes('Mozilla');
+  
+  if (!isRepeatedRootGet) {
+    // Log request details
+    console.log(`\n🔍 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    console.log(`📋 Headers:`, {
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent'],
+      'content-length': req.headers['content-length']
+    });
+    console.log(`🌐 Source: ${req.ip} - ${req.get('Referer') || 'Direct access'}`);
+    console.log(`🔗 Full URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`);
+    
+    if (req.body && Object.keys(req.body).length > 0) {
+      console.log(`📦 Body:`, JSON.stringify(req.body, null, 2));
+    }
+  }
+  
+  // Override res.end to log response
+  const originalEnd = res.end;
+  res.end = function(chunk?: any, encoding?: any): Response {
+    const duration = Date.now() - start;
+    if (!isRepeatedRootGet) {
+      console.log(`✅ [${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`);
+      if (res.statusCode >= 400) {
+        console.log(`❌ Error Response:`, chunk ? chunk.toString() : 'No response body');
+      }
+    }
+    return originalEnd.call(this, chunk, encoding);
+  };
+  
+  next();
+});
+
 // Request size validation
 app.use((req: Request, res: Response, next: NextFunction) => {
   const contentLength = parseInt(req.headers['content-length'] || '0');
@@ -410,11 +449,20 @@ app.get('/debug-sentry', function mainHandler(req, res) {
 
 // 404 handler
 app.use('*', (req: Request, res: Response) => {
+  console.log(`❌ 404 Not Found: ${req.method} ${req.originalUrl}`);
+  console.log(`📋 Request Headers:`, {
+    'content-type': req.headers['content-type'],
+    'authorization': req.headers['authorization'] ? 'Bearer ***' : 'Missing',
+    'user-agent': req.headers['user-agent']
+  });
+  console.log(`📦 Request Body:`, req.body);
+  
   res.status(404).json({
     error: 'Endpoint not found',
     path: req.originalUrl,
     method: req.method,
-    availableEndpoints: ['/health', '/api/status', '/api/train', '/api/ask', '/api/analytics', '/api/feedback']
+    availableEndpoints: ['/health', '/api/status', '/api/train', '/api/ask', '/api/analytics', '/api/feedback'],
+    message: 'Check if you are using the correct HTTP method and URL path'
   });
 });
 

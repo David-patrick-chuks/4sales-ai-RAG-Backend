@@ -52,15 +52,15 @@ export async function getContentVersion(agentId: string, contentHash: string, so
   }
 }
 
-export function chunkText(text: string, maxLength: number = 1000, overlap: number = 200): ChunkWithMetadata[] {
+export function chunkText(text: string, maxLength: number = 2000, overlap: number = 400): ChunkWithMetadata[] {
     try {
         console.log(`[DEBUG] chunkText received text of type: ${typeof text} and length: ${text?.length || 0}`);
         if (typeof text !== 'string' || text.trim().length === 0) {
             console.error('[DEBUG] chunkText received invalid input. Returning empty array.');
             return [];
         }
-        if (!Number.isFinite(maxLength) || maxLength <= 0) maxLength = 1000;
-        if (!Number.isFinite(overlap) || overlap < 0) overlap = 200;
+        if (!Number.isFinite(maxLength) || maxLength <= 0) maxLength = 2000;
+        if (!Number.isFinite(overlap) || overlap < 0) overlap = 400;
         
         // Split by paragraphs first to preserve natural breaks
         const paragraphs = text.split(/\n\s*\n/);
@@ -93,7 +93,8 @@ export function chunkText(text: string, maxLength: number = 1000, overlap: numbe
                     continue;
                 }
                 
-                // Split long paragraphs by sentences
+                // For longer paragraphs, try to preserve story context
+                // Split by sentences but try to keep related content together
                 const sentences = paragraph.split(/(?<=[.?!])\s+/);
                 let current = '';
                 let i = 0;
@@ -102,12 +103,14 @@ export function chunkText(text: string, maxLength: number = 1000, overlap: numbe
                 while (i < sentences.length) {
                     current = '';
                     let j = i;
+                    
+                    // Try to group sentences that form a complete thought or story segment
                     while (j < sentences.length && (current + sentences[j]).length <= maxLength) {
                         current += sentences[j] + ' ';
                         j++;
                     }
-
-                    // If a single sentence is longer than maxLength, it becomes its own chunk.
+                    
+                    // If we couldn't add any sentences, force at least one
                     if (i === j) {
                         const chunkText = sentences[i].trim();
                         chunks.push({
@@ -140,6 +143,7 @@ export function chunkText(text: string, maxLength: number = 1000, overlap: numbe
                     });
                     
                     // Overlap: step back by enough sentences to cover the overlap
+                    // For story content, we want more overlap to preserve context
                     let overlapLen = 0;
                     let k = j - 1;
 
@@ -171,6 +175,15 @@ export function chunkText(text: string, maxLength: number = 1000, overlap: numbe
         });
         
         console.log(`[DEBUG] Text chunked. Number of chunks: ${finalChunks.length}`);
+        
+        // Debug: Show first few chunks
+        if (finalChunks.length > 0) {
+            console.log(`[DEBUG] First 3 chunks preview:`);
+            finalChunks.slice(0, 3).forEach((chunk, index) => {
+                console.log(`[DEBUG] Chunk ${index + 1} (${chunk.text.length} chars): "${chunk.text.substring(0, 150)}..."`);
+            });
+        }
+        
         return finalChunks;
     } catch (err) {
         console.error('[DEBUG] chunkText error:', err);

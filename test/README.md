@@ -40,7 +40,6 @@ npm test
 ### Test Configuration
 The tests use the following configuration:
 - **Base URL**: `http://localhost:3000`
-- **API Token**: From `AGENT_API_TOKEN` env var
 - **Training Types**: Document, Website, YouTube
 - **Sample Document**: `src/utils/sample.txt`
 
@@ -115,7 +114,6 @@ The comprehensive test suite provides:
 - `/api/cache/clear/:agentId` - Clear cache
 
 ### Error Handling
-- Invalid token handling
 - Missing fields validation
 - 404 error handling
 - Rate limiting tests

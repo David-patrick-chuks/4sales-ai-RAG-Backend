@@ -10,12 +10,12 @@ const router = express.Router();
 
 // Configuration for retrieval and filtering
 const RETRIEVAL_CONFIG = {
-  VECTOR_K: 8, // Top-k for vector search (reduced from 20)
-  KEYWORD_K: 3, // Top-k for keyword search (reduced from 5)
+  VECTOR_K: 20, // Increased from 8 to get more vector search results
+  KEYWORD_K: 8, // Increased from 3 to get more keyword search results
   MIN_SIMILARITY_SCORE: 0.3, // Lowered from 0.75 to be more lenient
-  MAX_CONTEXT_LENGTH: 4000, // Reduced context length for better focus
-  CONFIDENCE_THRESHOLD: 0.4, // Lowered from 0.6 to be more lenient
-  MAX_CHUNKS: 5 // Maximum chunks to include in context
+  MAX_CONTEXT_LENGTH: 50000, // Increased from 4000 to take advantage of Gemini's 1M token capacity
+  CONFIDENCE_THRESHOLD: 0.2, // Lowered from 0.4 to be more lenient
+  MAX_CHUNKS: 10 // Increased from 5 to allow more chunks with larger context
 };
 
 // Agent metadata interface
@@ -30,7 +30,7 @@ interface AgentMetadata {
 const getAgentMetadata = async (agentId: string): Promise<AgentMetadata | null> => {
   try {
     // Connect to the agents database (same MongoDB cluster, different database)
-    const agentsDb = mongoose.connection.useDb('agents');
+    const agentsDb = mongoose.connection.useDb('test');
     const Agent = agentsDb.model('Agent', new mongoose.Schema({
       agentId: String,
       name: String,
@@ -120,10 +120,14 @@ const filterAndRankResults = (results: any[], question: string, questionVector: 
 // Input validation middleware with security
 const validateAskRequest = (req: Request, res: Response, next: NextFunction) => {
   const { agentId, question } = req.body;
+  
+  console.log(`🔍 Validating request for agent: ${agentId}`);
+  console.log(`📝 Question: "${question}"`);
 
   // Sanitize and validate agentId
   const agentIdValidation = sanitizeAgentId(agentId);
   if (!agentIdValidation.isValid) {
+    console.log(`❌ Agent ID validation failed: ${agentIdValidation.error}`);
     return res.status(400).json({
       error: agentIdValidation.error,
       field: 'agentId'
@@ -133,6 +137,7 @@ const validateAskRequest = (req: Request, res: Response, next: NextFunction) => 
   // Sanitize and validate question
   const questionValidation = sanitizeQuestion(question);
   if (!questionValidation.isValid) {
+    console.log(`❌ Question validation failed: ${questionValidation.error}`);
     return res.status(400).json({
       error: questionValidation.error,
       field: 'question'
@@ -142,6 +147,10 @@ const validateAskRequest = (req: Request, res: Response, next: NextFunction) => 
   // Replace with sanitized values
   req.body.agentId = agentIdValidation.sanitized;
   req.body.question = questionValidation.sanitized;
+  
+  console.log(`✅ Request validation passed`);
+  console.log(`🔧 Sanitized agentId: ${agentIdValidation.sanitized}`);
+  console.log(`🔧 Sanitized question: "${questionValidation.sanitized}"`);
 
   next();
 };
@@ -350,8 +359,25 @@ router.post('/', validateAskRequest, async (req: Request, res: Response) => {
     }
 
     // Check if agent exists in the database
+    console.log(`🔍 Checking if agent ${agentId} exists in Memory collection...`);
     const agentExists = await Memory.exists({ agentId });
+    console.log(`🔍 Agent exists in Memory collection: ${agentExists}`);
+    
     if (!agentExists) {
+      console.log(`❌ Agent ${agentId} not found in Memory collection`);
+      console.log(`📊 Checking what agents exist in Memory collection...`);
+      
+      // Get all agents in Memory collection for debugging
+      const allAgents = await Memory.aggregate([
+        {
+          $group: {
+            _id: '$agentId',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      console.log(`📊 Agents in Memory collection:`, allAgents);
+      
       const processingTime = Date.now() - startTime;
       
       // Track unanswered query for non-existent agent
@@ -455,6 +481,24 @@ router.post('/', validateAskRequest, async (req: Request, res: Response) => {
     const filteredResults = filterAndRankResults(allResults, question, questionVector);
     
     console.log(`📊 Filtered to ${filteredResults.length} high-confidence results`);
+    
+    // Debug: Show confidence scores for each result
+    if (filteredResults.length > 0) {
+      console.log(`📊 Confidence scores for filtered results:`);
+      filteredResults.forEach((result, index) => {
+        const textPreview = result.text ? result.text.substring(0, 100) : 'No text available';
+        console.log(`  ${index + 1}. Confidence: ${result.confidence?.toFixed(3)}, Similarity: ${result.similarity?.toFixed(3)}, Text preview: "${textPreview}..."`);
+      });
+    } else {
+      console.log(`⚠️ No results passed confidence threshold (${RETRIEVAL_CONFIG.CONFIDENCE_THRESHOLD})`);
+      console.log(`📊 All results confidence scores:`);
+      allResults.forEach((result, index) => {
+        const confidence = result.confidence || 0;
+        const similarity = result.similarity || 0;
+        const textPreview = result.text ? result.text.substring(0, 100) : 'No text available';
+        console.log(`  ${index + 1}. Confidence: ${confidence.toFixed(3)}, Similarity: ${similarity.toFixed(3)}, Text preview: "${textPreview}..."`);
+      });
+    }
 
     // Deduplicate and build context
     const uniqueTexts = Array.from(new Set(filteredResults.map((r: any) => r.text)));
@@ -547,9 +591,19 @@ Agent Information:
     const prompt = `
 You are ${agentMetadata?.name || 'an expert assistant'} with the role of ${agentMetadata?.role || 'an AI assistant'}.
 
-${agentContext}${agentMetadata?.do_not_answer_from_general_knowledge ? 'IMPORTANT: Use ONLY the context below to answer the question. Do NOT use any general knowledge outside of the provided context.' : 'Use the context below to answer the question. You may supplement with general knowledge if needed.'}
+${agentContext}${agentMetadata?.do_not_answer_from_general_knowledge ? 'IMPORTANT: Use ONLY the context below to answer the question. Do NOT use any general knowledge outside of the provided context. However, be helpful and conversational in your response.' : 'Use the context below to answer the question. You may supplement with general knowledge if needed.'}
 
 ${agentMetadata?.tone ? `Respond in a ${agentMetadata.tone} tone.` : ''}
+
+Instructions:
+- Respond like a helpful customer service chatbot
+- Be friendly, conversational, and direct
+- Keep responses short and concise (1-2 sentences max)
+- Answer questions naturally as if you're talking to a customer
+- Use the information available in the context to provide helpful answers
+- Be confident when you have the information
+- If you don't have specific information, say so politely
+- Focus on being helpful and solving the customer's question quickly
 
 Context:
 ${context}
@@ -623,6 +677,16 @@ Answer:`;
     } catch (auditError) {
       console.error('❌ Response audit failed:', auditError);
     }
+    
+    // Log the question and answer
+    console.log(`\n💬 Q&A Summary:`);
+    console.log(`❓ Question: "${question}"`);
+    console.log(`🤖 Answer: "${reply}"`);
+    console.log(`📊 Confidence: ${parseFloat(overallConfidence.toFixed(3))}`);
+    console.log(`⏱️ Processing time: ${processingTime}ms`);
+    console.log(`📝 Chunks used: ${uniqueTexts.length}`);
+    console.log(`🔍 Sources: ${sourcesUsed.map((s: any) => s.source).join(', ')}`);
+    console.log(`\n`);
     
     res.json({ 
       agent_id: agentId,

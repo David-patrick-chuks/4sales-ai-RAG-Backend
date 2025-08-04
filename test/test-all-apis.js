@@ -11,12 +11,10 @@ const BASE_URL = 'http://localhost:3000';
 const TEST_AGENT_ID = 'test-agent-comprehensive';
 const TRAINED_AGENT_ID = 'test-agent-doc'; // Use the agent that was trained in test-api.js
 const SAMPLE_DOC_PATH = path.join('src', 'utils', 'sample.txt');
-const API_TOKEN = process.env.AGENT_API_TOKEN || '123456'; // Read from .env file
 
 // Common headers for API requests
 const API_HEADERS = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${API_TOKEN}`
+  'Content-Type': 'application/json'
 };
 
 // Test results tracking
@@ -143,7 +141,6 @@ async function testTrainEndpoints() {
         form.append('files', fs.createReadStream(testCase.filePath));
         
         const formHeaders = form.getHeaders();
-        formHeaders['Authorization'] = `Bearer ${API_TOKEN}`;
         
         trainResult = await makeRequest('/api/train', 'POST', form, formHeaders);
       } else {
@@ -399,16 +396,6 @@ async function testCacheEndpoints() {
 async function testErrorHandling() {
   console.log('\n🧪 Testing Error Handling...');
   
-  // Test with invalid token
-  const invalidTokenResult = await makeRequest('/api/ask', 'POST', {
-    agentId: TEST_AGENT_ID,
-    question: 'Test question'
-  }, {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer invalid-token'
-  });
-  logTestResult('Invalid token handling', !invalidTokenResult.success, invalidTokenResult.success ? 'Should have failed' : '');
-  
   // Test with missing required fields
   const missingFieldsResult = await makeRequest('/api/ask', 'POST', {
     agentId: TEST_AGENT_ID
@@ -455,7 +442,6 @@ async function testRateLimiting() {
 async function runAllTests() {
   console.log('🚀 Starting Comprehensive API Test Suite...\n');
   console.log(`📊 Testing against: ${BASE_URL}`);
-  console.log(`🔑 Using API Token: ${API_TOKEN} (from AGENT_API_TOKEN env var)`);
   console.log(`👤 Test Agent ID: ${TEST_AGENT_ID} (will be trained during test)\n`);
   
   try {

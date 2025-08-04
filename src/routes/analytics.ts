@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import Memory from '../models/Memory.js';
 import { analyticsService } from '../services/analytics.js';
 import { sanitizeAgentId } from '../utils/security.js';
 
@@ -481,6 +482,124 @@ router.get('/export/:agentId', async (req, res) => {
     console.error('❌ Error exporting analytics:', error);
     res.status(500).json({ 
       error: 'Failed to export analytics data' 
+    });
+  }
+});
+
+/**
+ * GET /analytics/memory-agents
+ * Check what agents exist in the Memory collection
+ */
+router.get('/memory-agents', async (req, res) => {
+  try {
+    // Get all unique agent IDs from the Memory collection
+    const agents = await Memory.aggregate([
+      {
+        $group: {
+          _id: '$agentId',
+          count: { $sum: 1 },
+          lastUpdated: { $max: '$createdAt' }
+        }
+      },
+      {
+        $sort: { lastUpdated: -1 }
+      }
+    ]);
+
+    console.log('📊 Found agents in Memory collection:', agents);
+
+    res.json({
+      success: true,
+      data: {
+        agents: agents.map(agent => ({
+          agentId: agent._id,
+          chunkCount: agent.count,
+          lastUpdated: agent.lastUpdated
+        })),
+        totalAgents: agents.length
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error checking Memory collection:', error);
+    res.status(500).json({ 
+      error: 'Failed to check Memory collection' 
+    });
+  }
+});
+
+/**
+ * DELETE /analytics/memory-clear
+ * Delete all data from the Memory collection
+ */
+router.delete('/memory-clear', async (req, res) => {
+  try {
+    console.log('🗑️ Clearing all data from Memory collection...');
+    
+    // Get count before deletion
+    const countBefore = await Memory.countDocuments();
+    console.log(`📊 Found ${countBefore} documents in Memory collection`);
+    
+    // Delete all documents
+    const result = await Memory.deleteMany({});
+    
+    console.log(`🗑️ Deleted ${result.deletedCount} documents from Memory collection`);
+    
+    res.json({
+      success: true,
+      message: `Successfully cleared Memory collection`,
+      data: {
+        deletedCount: result.deletedCount,
+        countBefore,
+        countAfter: 0
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error clearing Memory collection:', error);
+    res.status(500).json({ 
+      error: 'Failed to clear Memory collection' 
+    });
+  }
+});
+
+/**
+ * DELETE /analytics/memory-agent/:agentId
+ * Delete all data for a specific agent from the Memory collection
+ */
+router.delete('/memory-agent/:agentId', async (req, res) => {
+  try {
+    const { agentId } = req.params;
+    
+    console.log(`🗑️ Clearing data for agent ${agentId} from Memory collection...`);
+    
+    // Get count before deletion
+    const countBefore = await Memory.countDocuments({ agentId });
+    console.log(`📊 Found ${countBefore} documents for agent ${agentId}`);
+    
+    // Delete documents for this agent
+    const result = await Memory.deleteMany({ agentId });
+    
+    console.log(`🗑️ Deleted ${result.deletedCount} documents for agent ${agentId}`);
+    
+    res.json({
+      success: true,
+      message: `Successfully cleared data for agent ${agentId}`,
+      data: {
+        agentId,
+        deletedCount: result.deletedCount,
+        countBefore,
+        countAfter: 0
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error clearing agent data from Memory collection:', error);
+    res.status(500).json({ 
+      error: 'Failed to clear agent data from Memory collection' 
     });
   }
 });
