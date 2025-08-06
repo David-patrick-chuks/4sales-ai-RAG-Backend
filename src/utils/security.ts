@@ -4,9 +4,9 @@ import { URL } from 'url';
 // Security configuration
 export const SECURITY_CONFIG = {
   // File upload limits
-  MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB
-  MAX_FILES_PER_REQUEST: 10,
-  MAX_TEXT_LENGTH: 1000000, // 1MB of text
+  MAX_FILE_SIZE: 500 * 1024 * 1024, // Increased from 20MB to 50MB
+  MAX_FILES_PER_REQUEST: 100,
+  MAX_TEXT_LENGTH: 10 * 1024 * 1024, // Increased from 1MB to 10MB for large training data
   
   // Allowed file extensions (whitelist approach)
   ALLOWED_DOCUMENT_EXTENSIONS: ['.pdf', '.docx', '.doc', '.txt', '.csv', '.md'],
@@ -27,9 +27,9 @@ export const SECURITY_CONFIG = {
   
   // Input sanitization
   MAX_AGENT_ID_LENGTH: 100,
-  MAX_QUESTION_LENGTH: 1000,
+  MAX_QUESTION_LENGTH: 50000,
   MAX_SOURCE_URL_LENGTH: 500,
-  MAX_METADATA_SIZE: 10000, // 10KB
+  MAX_METADATA_SIZE: 50000, // 10KB
 };
 
 /**

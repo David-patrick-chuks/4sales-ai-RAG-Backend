@@ -65,12 +65,12 @@ const validateTrainRequest = (req: Request, res: Response, next: NextFunction) =
     });
   }
 
-  // For audio/video, require files[]
+  // For audio/video, require files
   if ((source === 'audio' || source === 'video')) {
     if (!files || files.length === 0) {
       return res.status(400).json({
-        error: 'For audio or video training, files[] must be provided',
-        field: 'files[]'
+        error: 'For audio or video training, files must be provided',
+        field: 'files'
       });
     }
     // fileType is required for files
@@ -94,11 +94,11 @@ const validateTrainRequest = (req: Request, res: Response, next: NextFunction) =
     return next();
   }
 
-  // For document or default, require text or files[]
+  // For document or default, require text or files
   if ((!files || files.length === 0) && (!text || typeof text !== 'string')) {
     return res.status(400).json({
-      error: 'Either text or files[] must be provided',
-      field: 'text|files[]'
+      error: 'Either text or files must be provided',
+      field: 'text|files'
     });
   }
   // If files are present, fileType is required
@@ -114,14 +114,18 @@ const validateTrainRequest = (req: Request, res: Response, next: NextFunction) =
 // Async training job processor (DB version)
 async function processTrainingJob(jobId: string, jobData: any) {
   try {
+    console.log(`[DEBUG] Starting training job ${jobId} for agent ${jobData.agentId}`);
     await TrainJob.findOneAndUpdate({ jobId }, { status: 'processing', progress: 0, error: null });
     const { agentId, text, source, sourceUrl, sourceMetadata, fileType, files } = jobData;
     let trainingText = '';
     let usedFiles = false;
     let fileNames: string[] = [];
 
+    console.log(`[DEBUG] Processing source: ${source}, sourceUrl: ${sourceUrl}, files count: ${files?.length || 0}`);
+
     // Website scraping support
     if (source === 'website' && sourceUrl) {
+      console.log(`[DEBUG] Starting website scraping for: ${sourceUrl}`);
       const websiteResult = await scrapeAllRoutes(sourceUrl, { firstRouteOnly: true } );
       console.log('[DEBUG] Website result:', websiteResult);
       if (typeof websiteResult === 'string') {
@@ -134,9 +138,11 @@ async function processTrainingJob(jobId: string, jobData: any) {
     }
     // YouTube transcript support
     else if (source === 'youtube' && sourceUrl) {
+      console.log(`[DEBUG] Starting YouTube processing for: ${sourceUrl}`);
       try {
         const rawTranscript = await fetchYouTubeTranscript(sourceUrl);
         trainingText = cleanTranscript(rawTranscript);
+        console.log('[DEBUG] YouTube transcript:', trainingText);
         console.log(`Successfully fetched and cleaned transcript for URL: ${sourceUrl}`);
       } catch (ytError: any) {
         if (ytError.message?.includes('Transcript is disabled') || ytError.message?.includes('unavailable or empty')) {
@@ -245,13 +251,28 @@ async function processTrainingJob(jobId: string, jobData: any) {
     }
 
     if (!trainingText || trainingText.trim().length === 0) {
+      console.log(`[DEBUG] No training text found for job ${jobId}`);
       await TrainJob.findOneAndUpdate({ jobId }, { status: 'failed', error: { error: 'No valid training text found in input or files.' } });
       return;
     }
 
-    console.log('[DEBUG] Text ready for chunking. Length:', trainingText.length);
+    console.log(`[DEBUG] Text ready for chunking. Length: ${trainingText.length}`);
+    
+    // Check if text is too large and truncate if necessary
+    const MAX_TRAINING_TEXT_LENGTH = 50 * 1024 * 1024; // 50MB limit for training data
+    if (trainingText.length > MAX_TRAINING_TEXT_LENGTH) {
+      console.log(`[WARNING] Training text too large (${trainingText.length} chars), truncating to ${MAX_TRAINING_TEXT_LENGTH} chars`);
+      trainingText = trainingText.substring(0, MAX_TRAINING_TEXT_LENGTH);
+    }
+    
     const chunksWithMetadata = chunkText(trainingText);
     console.log(`[DEBUG] Text chunked. Number of chunks: ${chunksWithMetadata.length}`);
+
+    if (chunksWithMetadata.length === 0) {
+      console.log(`[DEBUG] No chunks created for job ${jobId}`);
+      await TrainJob.findOneAndUpdate({ jobId }, { status: 'failed', error: { error: 'Failed to create chunks from training text.' } });
+      return;
+    }
 
     const existingCount = await Memory.countDocuments({ agentId });
     await TrainJob.findOneAndUpdate({ jobId }, {
@@ -275,6 +296,8 @@ async function processTrainingJob(jobId: string, jobData: any) {
         const chunkText = chunkWithMetadata.text;
         const chunkMetadata = chunkWithMetadata.metadata;
         
+        console.log(`[DEBUG] Processing chunk ${i + 1}/${chunksWithMetadata.length} (${chunkText.length} chars)`);
+        
         // Generate content hash for deduplication
         const contentHash = generateContentHash(chunkText);
         
@@ -296,8 +319,11 @@ async function processTrainingJob(jobId: string, jobData: any) {
         
         let vector: number[];
         try {
+          console.log(`[DEBUG] Generating embedding for chunk ${i + 1}`);
           vector = await embedText(chunkText);
-        } catch {
+          console.log(`[DEBUG] Embedding generated successfully for chunk ${i + 1}`);
+        } catch (embedError) {
+          console.log(`[WARNING] Embedding failed for chunk ${i + 1}, using fallback: ${embedError}`);
           vector = new Array(768).fill(0);
         }
         
@@ -320,9 +346,13 @@ async function processTrainingJob(jobId: string, jobData: any) {
           chunkMetadata: enhancedChunkMetadata
         } as Partial<IMemory>);
         successCount++;
-      } catch {
+        console.log(`[DEBUG] Successfully processed chunk ${i + 1}`);
+      } catch (chunkError) {
+        console.log(`[ERROR] Failed to process chunk ${i + 1}: ${chunkError}`);
         errorCount++;
       }
+      
+      // Update progress more frequently for better feedback
       await TrainJob.findOneAndUpdate({ jobId }, {
         chunksProcessed: i + 1,
         progress: Math.round(((i + 1) / chunksWithMetadata.length) * 100),
@@ -335,6 +365,7 @@ async function processTrainingJob(jobId: string, jobData: any) {
     if (entries.length === 0) {
       // Check if all chunks were skipped due to duplicates
       if (skippedCount > 0 && skippedCount === chunksWithMetadata.length) {
+        console.log(`[DEBUG] All chunks were duplicates for job ${jobId}`);
         await TrainJob.findOneAndUpdate({ jobId }, {
           status: 'completed',
           result: {
@@ -353,12 +384,16 @@ async function processTrainingJob(jobId: string, jobData: any) {
           }
         });
       } else {
+        console.log(`[DEBUG] No chunks processed successfully for job ${jobId}`);
         await TrainJob.findOneAndUpdate({ jobId }, { status: 'failed', error: { error: 'Failed to process any chunks' } });
       }
       return;
     }
 
+    console.log(`[DEBUG] Storing ${entries.length} chunks to database for job ${jobId}`);
     await Memory.insertMany(entries);
+    console.log(`[DEBUG] Successfully stored ${entries.length} chunks for job ${jobId}`);
+    
     await TrainJob.findOneAndUpdate({ jobId }, {
       status: 'completed',
       result: {
@@ -375,7 +410,9 @@ async function processTrainingJob(jobId: string, jobData: any) {
         sourceMetadata
       }
     });
+    console.log(`[DEBUG] Training job ${jobId} completed successfully`);
   } catch (error: unknown) {
+    console.error(`[ERROR] Training job ${jobId} failed:`, error);
     await TrainJob.findOneAndUpdate({ jobId }, { status: 'failed', error: { error: error instanceof Error ? error.message : String(error) } });
   }
 }
@@ -541,26 +578,34 @@ router.post('/', upload.array('files', SECURITY_CONFIG.MAX_FILES_PER_REQUEST), v
 
 // GET /api/train/status/:jobId (DB version)
 router.get('/status/:jobId', async (req: Request, res: Response) => {
-  const { jobId } = req.params;
-  const job = await TrainJob.findOne({ jobId });
-  if (!job) {
-    return res.status(404).json({ error: 'Job not found' });
+  try {
+    const { jobId } = req.params;
+    const job = await TrainJob.findOne({ jobId });
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    res.json({
+      jobId: job.jobId,
+      status: job.status,
+      progress: job.progress,
+      error: job.error,
+      result: job.result,
+      createdAt: job.createdAt,
+      fileNames: job.fileNames,
+      usedFiles: job.usedFiles,
+      chunksProcessed: job.chunksProcessed,
+      totalChunks: job.totalChunks,
+      successCount: job.successCount,
+      errorCount: job.errorCount,
+      skippedCount: job.skippedCount
+    });
+  } catch (error: unknown) {
+    console.error('Error fetching training job status:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch training job status',
+      details: error instanceof Error ? error.message : String(error)
+    });
   }
-  res.json({
-    jobId: job.jobId,
-    status: job.status,
-    progress: job.progress,
-    error: job.error,
-    result: job.result,
-    createdAt: job.createdAt,
-    fileNames: job.fileNames,
-    usedFiles: job.usedFiles,
-    chunksProcessed: job.chunksProcessed,
-    totalChunks: job.totalChunks,
-    successCount: job.successCount,
-    errorCount: job.errorCount,
-    skippedCount: job.skippedCount
-  });
 });
 
 export default router; 

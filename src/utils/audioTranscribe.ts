@@ -55,7 +55,22 @@ export class GeminiAudioTranscriber {
       if (!uploadedFile?.uri || !uploadedFile.mimeType) {
         throw new Error('File upload failed, URI or MIME type is missing.');
       }
-      const systemPrompt = `You are an AI assistant creating a detailed, factual log of multimedia content for a Retrieval-Augmented Generation (RAG) system. Your output must be a comprehensive account of the file's contents, including spoken words, on-screen text, visual descriptions, and actions. Present this information in clear, well-structured paragraphs. The goal is to create a rich, self-contained document that captures all information present in the media. Do not use any framing language or meta-commentary like "This video contains...". Begin the description directly.`;
+      const systemPrompt = `You are an AI assistant tasked with creating a complete, word-for-word transcript of audio content for a Retrieval-Augmented Generation (RAG) system. 
+
+Your task is to transcribe ALL spoken words, dialogue, and verbal content exactly as they are spoken. Do NOT summarize, paraphrase, or provide commentary. 
+
+Requirements:
+- Transcribe every spoken word verbatim
+- Include all dialogue, conversations, and verbal content
+- Preserve the exact wording and phrases used
+- Do not add descriptions like "the speaker says" or "the audio contains"
+- Do not summarize or condense the content
+- Focus only on the spoken words, not background sounds or music
+- If there are multiple speakers, indicate speaker changes when clear
+- If words are unclear or inaudible, mark them as [inaudible] or [unclear]
+
+Output format: A clean, complete transcript of all spoken content, ready for question-answering.`;
+
       const result = await this.ai.models.generateContent({
         model: 'gemini-1.5-flash',
         config: {
@@ -64,13 +79,14 @@ export class GeminiAudioTranscriber {
         },
         contents: createUserContent([
           createPartFromUri(uploadedFile.uri, uploadedFile.mimeType),
-          `Generate a detailed log of the audio's content. Transcribe all spoken dialogue. Describe any significant non-dialogue sounds or music. The final output should be a detailed, paragraph-based summary of everything that can be heard in the audio.`,
+          `Provide a complete, word-for-word transcript of all spoken content in this audio file. Transcribe every word that is spoken, exactly as it is said. Do not summarize or provide commentary - just give me the complete transcript.`,
         ]),
       });
 
       const text = result.text;
       // console.log(result.text);
-      // console.log('[DEBUG] Raw Gemini Response:', JSON.stringify(text, null, 2));
+      console.log(`[DEBUG] Audio transcript generated (${text.length} characters)`);
+      console.log(`[DEBUG] Transcript preview: "${text.substring(0, 200)}..."`);
 
       if (!text) {
         throw new Error('Invalid response from the model (empty transcript).');

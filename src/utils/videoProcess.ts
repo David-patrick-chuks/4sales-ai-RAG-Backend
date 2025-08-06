@@ -76,7 +76,25 @@ export class VideoProcessor {
       if (attempts === maxAttempts) {
         throw new Error('File processing timed out.');
       }
-      const systemPrompt = `You are an AI assistant creating a detailed, factual log of multimedia content for a Retrieval-Augmented Generation (RAG) system. Your output must be a comprehensive account of the file's contents, including spoken words, on-screen text, visual descriptions, and actions. Present this information in clear, well-structured paragraphs. The goal is to create a rich, self-contained document that captures all information present in the media. Do not use any framing language or meta-commentary like "This video contains...". Begin the description directly.`;
+      const systemPrompt = `You are an AI assistant tasked with creating a clean transcript of video content for a Retrieval-Augmented Generation (RAG) system.
+
+Your task is to extract ONLY:
+1. All spoken words and dialogue (verbatim)
+2. Any on-screen text, captions, or written content
+3. Important text that appears in the video
+
+Requirements:
+- Transcribe every spoken word exactly as spoken
+- Include all on-screen text and captions
+- Do NOT include timestamps, scene descriptions, or visual details
+- Do NOT describe what you see (colors, camera angles, etc.)
+- Do NOT add commentary or summaries
+- Focus only on the actual text content (spoken and written)
+- If there are multiple speakers, indicate speaker changes when clear
+- If words are unclear, mark them as [inaudible]
+
+Output format: A clean transcript containing only the spoken words and on-screen text, ready for question-answering.`;
+
       // Generate content
       const result = await this.ai.models.generateContent({
         model: 'gemini-1.5-flash-latest', // Using 1.5-flash for better video support
@@ -86,7 +104,7 @@ export class VideoProcessor {
         },
         contents: createUserContent([
           createPartFromUri(uploadedFile.uri, uploadedFile.mimeType),
-          `Generate a detailed log of the video's content. Transcribe all spoken dialogue and on-screen text. Describe the key visual elements, scenes, and any actions that take place. The final output should be a detailed, paragraph-based summary of everything that happens in the video, both visually and audibly.`,
+          `Extract ONLY the spoken words and on-screen text from this video. Do not include timestamps, scene descriptions, or visual details. Provide a clean transcript of the actual content that can be heard or read.`,
         ]),
       });
       const response = await result.text;
@@ -94,6 +112,10 @@ export class VideoProcessor {
       if (!text || !text.trim()) {
         throw new Error('Generated content is empty or invalid');
       }
+      
+      console.log(`[DEBUG] Video transcript generated (${text.length} characters)`);
+      console.log(`[DEBUG] Transcript preview: "${text.substring(0, 200)}..."`);
+      
       return text;
     } catch (error: any) {
       if (retryCount < maxRetries && (error.message?.includes('429') || error.message?.includes('503'))) {

@@ -183,16 +183,16 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Request size validation
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const contentLength = parseInt(req.headers['content-length'] || '0');
-  if (contentLength > SECURITY_CONFIG.MAX_TEXT_LENGTH) {
-    return res.status(413).json({
-      error: 'Request too large',
-      maxSize: `${SECURITY_CONFIG.MAX_TEXT_LENGTH / 1024}kb`
-    });
-  }
-  next();
-});
+// app.use((req: Request, res: Response, next: NextFunction) => {
+//   const contentLength = parseInt(req.headers['content-length'] || '0');
+//   if (contentLength > SECURITY_CONFIG.MAX_TEXT_LENGTH) {
+//     return res.status(413).json({
+//       error: 'Request too large',
+//       maxSize: `${SECURITY_CONFIG.MAX_TEXT_LENGTH / 1024}kb`
+//     });
+//   }
+//   next();
+// });
 
 // Body parsing
 app.use(express.json({ 
@@ -417,7 +417,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
 app.use('/api', requireApiToken);
 
 // API routes
-app.use('/api/train', trainLimiter, trainRoute);
+app.use('/api/train', trainRoute);
 app.use('/api/ask', askLimiter, askRoute);
 app.use('/api/analytics', analyticsLimiter, analyticsRoute);
 app.use('/api/feedback', feedbackLimiter, feedbackRoute);

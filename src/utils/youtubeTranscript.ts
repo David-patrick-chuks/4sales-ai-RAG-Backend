@@ -85,7 +85,22 @@ export async function summarizeYouTubeVideoWithGemini(url: string): Promise<stri
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
   const result = await model.generateContent([
-    'Please summarize the video in 3-5 sentences for training an AI assistant. Focus on the main topics and facts.',
+    `You are an AI assistant tasked with creating a complete, word-for-word transcript of video content for a Retrieval-Augmented Generation (RAG) system.
+
+Your task is to transcribe ALL spoken words, dialogue, and verbal content exactly as they are spoken. Do NOT summarize, paraphrase, or provide commentary.
+
+Requirements:
+* Transcribe every spoken word verbatim
+* Include all dialogue, conversations, and verbal content
+* Preserve the exact wording and phrases used
+* Do not add descriptions like "the speaker says" or "the video contains"
+* Do not summarize or condense the content
+* Focus only on the spoken words, not background sounds or music
+* If there are multiple speakers, indicate speaker changes when clear
+* If words are unclear or inaudible, mark them as [inaudible] or [unclear]
+* Include any on-screen text, captions, or written content that appears
+
+Output format: A clean, complete transcript of all spoken content and on-screen text, ready for question-answering.`,
     {
       fileData: {
         fileUri: url,
