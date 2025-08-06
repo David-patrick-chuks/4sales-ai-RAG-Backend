@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import Memory from '../models/Memory.js';
 
 export interface ChunkMetadata {
   chunkIndex: number;
@@ -26,8 +27,6 @@ export function generateContentHash(text: string): string {
  */
 export async function getContentVersion(agentId: string, contentHash: string, sourceUrl?: string): Promise<number> {
   try {
-    const Memory = (await import('../models/Memory')).default;
-    
     // Find existing content with same hash
     const existing = await Memory.findOne({ 
       agentId, 
