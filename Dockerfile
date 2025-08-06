@@ -22,6 +22,21 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine AS production
 
+# Install Chrome and dependencies for Puppeteer
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    && rm -rf /var/cache/apk/*
+
+# Tell Puppeteer to use the installed Chrome
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 # Install dependencies for native modules (runtime only)
 RUN apk add --no-cache python3 make g++
 
