@@ -85,8 +85,8 @@ Output format: A clean, complete transcript of all spoken content, ready for que
 
       const text = result.text;
       // console.log(result.text);
-      console.log(`[DEBUG] Audio transcript generated (${text.length} characters)`);
-      console.log(`[DEBUG] Transcript preview: "${text.substring(0, 200)}..."`);
+      console.log(`[DEBUG] Audio transcript generated (${text?.length || 0} characters)`);
+      console.log(`[DEBUG] Transcript preview: "${text?.substring(0, 200) || 'No text'}..."`);
 
       if (!text) {
         throw new Error('Invalid response from the model (empty transcript).');
