@@ -44,36 +44,36 @@ async function scrapeAndCleanContent(url: string): Promise<string> {
   let retries = 3;
   
   while (retries > 0) {
-    try {
+  try {
       debugLog(`Launching browser... (attempt ${4 - retries}/3)`);
-      browser = await puppeteer.launch({
-        headless: true,
+    browser = await puppeteer.launch({
+      headless: true,
         // executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
           '--single-process',
-          '--disable-gpu',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding',
-          '--disable-features=TranslateUI',
-          '--disable-ipc-flooding-protection',
-          '--disable-default-apps',
-          '--disable-extensions',
-          '--disable-plugins',
-          '--disable-sync',
-          '--disable-translate',
-          '--hide-scrollbars',
-          '--mute-audio',
-          '--no-default-browser-check',
-          '--no-pings',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
+        '--disable-gpu',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--disable-default-apps',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-sync',
+        '--disable-translate',
+        '--hide-scrollbars',
+        '--mute-audio',
+        '--no-default-browser-check',
+        '--no-pings',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
           '--disable-background-networking',
           '--disable-client-side-phishing-detection',
           '--disable-component-extensions-with-background-pages',
@@ -91,74 +91,74 @@ async function scrapeAndCleanContent(url: string): Promise<string> {
           '--disable-features=WebUIDarkMode',
         ],
         timeout: 30000,
-      });
-      debugLog('Browser launched successfully');
+    });
+    debugLog('Browser launched successfully');
 
-      const page = await browser.newPage();
-      debugLog('New page created');
+    const page = await browser.newPage();
+    debugLog('New page created');
 
       // Set page timeout
       page.setDefaultTimeout(30000);
       page.setDefaultNavigationTimeout(30000);
 
-      const userAgent = new UserAgent({ deviceCategory: 'desktop' }).toString();
-      debugLog(`Setting user agent: ${userAgent.substring(0, 50)}...`);
-      await page.setUserAgent(userAgent);
-      
-      debugLog('Enabling JavaScript...');
-      await page.setJavaScriptEnabled(true);
-      
-      debugLog('Setting up request interception...');
-      await page.setRequestInterception(true);
-      page.on('request', (req: any) => {
-        if (["image", "stylesheet", "font"].includes(req.resourceType())) {
-          debugLog(`Blocking resource: ${req.resourceType()} - ${req.url().substring(0, 100)}...`);
-          req.abort();
-        } else {
-          req.continue();
-        }
-      });
+    const userAgent = new UserAgent({ deviceCategory: 'desktop' }).toString();
+    debugLog(`Setting user agent: ${userAgent.substring(0, 50)}...`);
+    await page.setUserAgent(userAgent);
+    
+    debugLog('Enabling JavaScript...');
+    await page.setJavaScriptEnabled(true);
+    
+    debugLog('Setting up request interception...');
+    await page.setRequestInterception(true);
+    page.on('request', (req: any) => {
+      if (["image", "stylesheet", "font"].includes(req.resourceType())) {
+        debugLog(`Blocking resource: ${req.resourceType()} - ${req.url().substring(0, 100)}...`);
+        req.abort();
+      } else {
+        req.continue();
+      }
+    });
 
-      debugLog(`Navigating to URL: ${url}`);
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      debugLog('Page loaded successfully');
+    debugLog(`Navigating to URL: ${url}`);
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    debugLog('Page loaded successfully');
 
       // Wait a bit for any dynamic content
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const pageContent = await page.content();
-      debugLog(`Page content length: ${pageContent.length} characters`);
+    const pageContent = await page.content();
+    debugLog(`Page content length: ${pageContent.length} characters`);
 
-      if (
-        pageContent.includes('Verifying you are human') ||
-        pageContent.includes('Cloudflare')
-      ) {
-        debugLog('Cloudflare verification detected in page content');
-        throw new Error('Cloudflare verification detected');
-      }
+    if (
+      pageContent.includes('Verifying you are human') ||
+      pageContent.includes('Cloudflare')
+    ) {
+      debugLog('Cloudflare verification detected in page content');
+      throw new Error('Cloudflare verification detected');
+    }
 
-      debugLog('Extracting article content...');
-      const htmlContent = await page.evaluate(() => {
-        const article = document.querySelector('article') || document.body;
-        return article.innerHTML;
-      });
-      debugLog(`Extracted HTML content length: ${htmlContent.length} characters`);
+    debugLog('Extracting article content...');
+    const htmlContent = await page.evaluate(() => {
+      const article = document.querySelector('article') || document.body;
+      return article.innerHTML;
+    });
+    debugLog(`Extracted HTML content length: ${htmlContent.length} characters`);
 
-      const cleanedContent = cleanHTML(htmlContent);
-      debugLog(`Cleaned content length: ${cleanedContent.length} characters`);
+    const cleanedContent = cleanHTML(htmlContent);
+    debugLog(`Cleaned content length: ${cleanedContent.length} characters`);
 
-      if (!cleanedContent) {
-        debugLog('No content extracted from page');
-        throw new Error('No content extracted from page');
-      }
+    if (!cleanedContent) {
+      debugLog('No content extracted from page');
+      throw new Error('No content extracted from page');
+    }
 
-      debugLog('Content scraping completed successfully');
-      return cleanedContent;
-    } catch (error: any) {
+    debugLog('Content scraping completed successfully');
+    return cleanedContent;
+  } catch (error: any) {
       debugLog(`Error scraping ${url} (attempt ${4 - retries}/3): ${error.message}`, { 
-        stack: error.stack,
-        url: url 
-      });
+      stack: error.stack,
+      url: url 
+    });
       console.error(`Error scraping ${url} (attempt ${4 - retries}/3): ${error.message}`);
       
       // Close browser if it exists
@@ -179,18 +179,18 @@ async function scrapeAndCleanContent(url: string): Promise<string> {
       } else {
         throw new Error(`Failed to scrape content after 3 attempts: ${error.message}`);
       }
-    } finally {
-      if (browser) {
-        try {
-          debugLog('Closing browser...');
-          await browser.close();
-          debugLog('Browser closed successfully');
-        } catch (error: any) {
-          debugLog(`Error closing browser: ${error.message}`, { stack: error.stack });
-          console.error(`Error closing browser: ${error.message}`);
-        }
+  } finally {
+    if (browser) {
+      try {
+        debugLog('Closing browser...');
+        await browser.close();
+        debugLog('Browser closed successfully');
+      } catch (error: any) {
+        debugLog(`Error closing browser: ${error.message}`, { stack: error.stack });
+        console.error(`Error closing browser: ${error.message}`);
       }
     }
+  }
   }
   
   throw new Error('All retry attempts failed');
@@ -202,10 +202,10 @@ async function getAllLinks(url: string): Promise<string[]> {
   let retries = 3;
   
   while (retries > 0) {
-    try {
+  try {
       debugLog(`Launching browser for link extraction... (attempt ${4 - retries}/3)`);
-      browser = await puppeteer.launch({
-        headless: true,
+    browser = await puppeteer.launch({
+      headless: true,
         // executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: [
           '--no-sandbox',
@@ -251,28 +251,28 @@ async function getAllLinks(url: string): Promise<string[]> {
         timeout: 30000,
       });
       
-      const page = await browser.newPage();
+    const page = await browser.newPage();
       
       // Set page timeout
       page.setDefaultTimeout(30000);
       page.setDefaultNavigationTimeout(30000);
       
-      const userAgent = new UserAgent({ deviceCategory: 'desktop' }).toString();
-      await page.setUserAgent(userAgent);
-      
-      debugLog(`Navigating to URL for link extraction: ${url}`);
+    const userAgent = new UserAgent({ deviceCategory: 'desktop' }).toString();
+    await page.setUserAgent(userAgent);
+    
+    debugLog(`Navigating to URL for link extraction: ${url}`);
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       
       // Wait a bit for any dynamic content
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      debugLog('Extracting links from page...');
-      const links = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('a')).map((anchor) => anchor.href)
-      );
-      debugLog(`Found ${links.length} links on page`);
-      return links;
-    } catch (error: any) {
+    
+    debugLog('Extracting links from page...');
+    const links = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('a')).map((anchor) => anchor.href)
+    );
+    debugLog(`Found ${links.length} links on page`);
+    return links;
+  } catch (error: any) {
       debugLog(`Error getting links from ${url} (attempt ${4 - retries}/3): ${error.message}`, { stack: error.stack });
       console.error(`Error getting links from ${url} (attempt ${4 - retries}/3): ${error.message}`);
       
@@ -293,19 +293,19 @@ async function getAllLinks(url: string): Promise<string[]> {
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
       } else {
         debugLog('All retry attempts failed for link extraction');
-        return [];
+    return [];
       }
-    } finally {
-      if (browser) {
-        try {
-          debugLog('Closing browser for link extraction...');
-          await browser.close();
-        } catch (error: any) {
-          debugLog(`Error closing browser for link extraction: ${error.message}`, { stack: error.stack });
-          console.error(`Error closing browser: ${error.message}`);
-        }
+  } finally {
+    if (browser) {
+      try {
+        debugLog('Closing browser for link extraction...');
+        await browser.close();
+      } catch (error: any) {
+        debugLog(`Error closing browser for link extraction: ${error.message}`, { stack: error.stack });
+        console.error(`Error closing browser: ${error.message}`);
       }
     }
+  }
   }
   
   return [];
@@ -581,4 +581,4 @@ export async function scrapeAllRoutes(baseUrl: string, options?: { firstRouteOnl
     console.error(`Error scraping website ${baseUrl}: ${error.message}`);
     return { error: error.message, source: 'website' };
   }
-}
+} 

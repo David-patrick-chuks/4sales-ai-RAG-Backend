@@ -65,21 +65,21 @@
     "youtube-transcript": "^1.2.1"
   },
   "devDependencies": {
-    "@types/compression": "^1.7.5",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.23",
     "@types/jsdom": "^21.1.7",
     "@types/mime-types": "^3.0.1",
     "@types/mongoose": "^5.11.97",
-    "@types/morgan": "^1.9.9",
+    "@types/morgan": "^1.9.10",
     "@types/multer": "^1.4.13",
     "@types/node": "^20.0.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
-    "@types/textract": "^2.4.2",
+    "@types/textract": "^2.4.5",
     "@types/user-agents": "^1.0.4",
-    "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
   },
   "engines": {
     "node": ">=18.0.0",

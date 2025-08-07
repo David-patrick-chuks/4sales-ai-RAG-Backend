@@ -151,7 +151,7 @@ export function sanitizeSourceUrl(sourceUrl: string): { isValid: boolean; saniti
 /**
  * Validate file upload
  */
-export function validateFileUpload(file: Express.Multer.File): { isValid: boolean; error?: string } {
+export function validateFileUpload(file: any): { isValid: boolean; error?: string } {
   // Check file size
   if (file.size > SECURITY_CONFIG.MAX_FILE_SIZE) {
     return { isValid: false, error: `File too large (max ${SECURITY_CONFIG.MAX_FILE_SIZE / (1024 * 1024)}MB)` };
@@ -359,18 +359,18 @@ export function sanitizeRequest(req: Request): { isValid: boolean; sanitized?: a
   }
   
   // Validate files
-  if (req.files && Array.isArray(req.files)) {
-    if (req.files.length > SECURITY_CONFIG.MAX_FILES_PER_REQUEST) {
+  if ((req as any).files && Array.isArray((req as any).files)) {
+    if ((req as any).files.length > SECURITY_CONFIG.MAX_FILES_PER_REQUEST) {
       return { isValid: false, error: `Too many files (max ${SECURITY_CONFIG.MAX_FILES_PER_REQUEST})` };
     }
     
-    for (const file of req.files) {
+    for (const file of (req as any).files) {
       const fileResult = validateFileUpload(file);
       if (!fileResult.isValid) {
         return { isValid: false, error: fileResult.error };
       }
     }
-    sanitized.files = req.files;
+    sanitized.files = (req as any).files;
   }
   
   return { isValid: true, sanitized };

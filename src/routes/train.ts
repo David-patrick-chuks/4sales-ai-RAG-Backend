@@ -47,7 +47,7 @@ const validateTrainRequest = (req: Request, res: Response, next: NextFunction) =
   req.body = { ...req.body, ...sanitization.sanitized };
   
   const { agentId, text, source, sourceUrl, sourceMetadata, fileType } = req.body;
-  const files = req.files && Array.isArray(req.files) ? req.files : [];
+  const files = (req as any).files && Array.isArray((req as any).files) ? (req as any).files : [];
 
   // agentId is always required
   if (!agentId || typeof agentId !== 'string') {
@@ -555,7 +555,7 @@ async function processTrainingJob(jobId: string, jobData: any) {
 router.post('/', upload.array('files', SECURITY_CONFIG.MAX_FILES_PER_REQUEST), validateTrainRequest, async (req: Request, res: Response) => {
   try {
     const { agentId, text, source = 'document', sourceUrl, sourceMetadata = {}, fileType } = req.body;
-    const files = req.files && Array.isArray(req.files) ? req.files : [];
+    const files = (req as any).files && Array.isArray((req as any).files) ? (req as any).files : [];
     const jobId = uuidv4();
     await TrainJob.create({
       jobId,
