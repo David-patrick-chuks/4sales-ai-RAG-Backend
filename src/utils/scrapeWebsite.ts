@@ -48,7 +48,6 @@ async function scrapeAndCleanContent(url: string): Promise<string> {
       debugLog(`Launching browser... (attempt ${4 - retries}/3)`);
     browser = await puppeteer.launch({
       headless: true,
-        // executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -206,7 +205,6 @@ async function getAllLinks(url: string): Promise<string[]> {
       debugLog(`Launching browser for link extraction... (attempt ${4 - retries}/3)`);
     browser = await puppeteer.launch({
       headless: true,
-        // executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
