@@ -21,7 +21,7 @@ const upload = multer({
     fileSize: SECURITY_CONFIG.MAX_FILE_SIZE,
     files: SECURITY_CONFIG.MAX_FILES_PER_REQUEST
   },
-  fileFilter: (req, file, cb) => {
+      fileFilter: (req: any, file: any, cb: any) => {
     // Use our security validation
     const validation = validateFileUpload(file);
     if (validation.isValid) {
