@@ -44,7 +44,7 @@ RUN apk add --no-cache python3 make g++
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Set working directory
+# Set working directoryy
 WORKDIR /app
 
 # Copy package files
