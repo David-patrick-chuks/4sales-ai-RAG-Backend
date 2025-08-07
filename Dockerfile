@@ -31,6 +31,7 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    dumb-init \
     && rm -rf /var/cache/apk/*
 
 # Tell Puppeteer to use the installed Chrome
@@ -44,7 +45,11 @@ RUN apk add --no-cache python3 make g++
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Set working directoryy
+# Create directories with proper permissions
+RUN mkdir -p /app /home/nodejs/.cache/puppeteer && \
+    chown -R nodejs:nodejs /app /home/nodejs
+
+# Set working directory
 WORKDIR /app
 
 # Copy package files
@@ -74,5 +79,5 @@ ENV PORT=3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# Start the application
-CMD ["npm", "start"] 
+# Start the application with dumb-init for proper signal handling
+CMD ["dumb-init", "npm", "start"] 
