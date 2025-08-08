@@ -46,18 +46,15 @@ async function scrapeAndCleanContent(url: string): Promise<string> {
   while (retries > 0) {
     try {
       debugLog(`Launching browser... (attempt ${4 - retries}/3)`);
-      browser = await puppeteer.launch({
-        headless: true,
-        executablePath: process.env.NODE_ENV === "production" 
-          ? process.env.PUPPETEER_EXECUTABLE_PATH 
-          : undefined,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
           '--single-process',
           '--disable-gpu',
           '--disable-background-timer-throttling',
@@ -208,11 +205,8 @@ async function getAllLinks(url: string): Promise<string[]> {
   while (retries > 0) {
     try {
       debugLog(`Launching browser for link extraction... (attempt ${4 - retries}/3)`);
-      browser = await puppeteer.launch({
-        headless: true,
-        executablePath: process.env.NODE_ENV === "production" 
-          ? process.env.PUPPETEER_EXECUTABLE_PATH 
-          : undefined,
+    browser = await puppeteer.launch({
+      headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
