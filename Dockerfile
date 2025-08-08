@@ -1,5 +1,5 @@
 # Use the official Puppeteer Docker image
-FROM ghcr.io/puppeteer/puppeteer:19.7.2
+FROM ghcr.io/puppeteer/puppeteer:24.15.0
 
 # Set environment variables for Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \

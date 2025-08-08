@@ -1,11 +1,8 @@
 import createDOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import puppeteer from 'puppeteer';
 import { URL } from 'url';
 import UserAgent from 'user-agents';
-
-puppeteer.use(StealthPlugin());
 
 // Debug mode configuration
 const DEBUG_MODE = process.env.DEBUG_SCRAPING === 'true' || process.env.NODE_ENV === 'development';

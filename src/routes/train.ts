@@ -579,26 +579,26 @@ router.post('/', upload.array('files', SECURITY_CONFIG.MAX_FILES_PER_REQUEST), v
 // GET /api/train/status/:jobId (DB version)
 router.get('/status/:jobId', async (req: Request, res: Response) => {
   try {
-    const { jobId } = req.params;
-    const job = await TrainJob.findOne({ jobId });
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-    res.json({
-      jobId: job.jobId,
-      status: job.status,
-      progress: job.progress,
-      error: job.error,
-      result: job.result,
-      createdAt: job.createdAt,
-      fileNames: job.fileNames,
-      usedFiles: job.usedFiles,
-      chunksProcessed: job.chunksProcessed,
-      totalChunks: job.totalChunks,
-      successCount: job.successCount,
-      errorCount: job.errorCount,
-      skippedCount: job.skippedCount
-    });
+  const { jobId } = req.params;
+  const job = await TrainJob.findOne({ jobId });
+  if (!job) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
+  res.json({
+    jobId: job.jobId,
+    status: job.status,
+    progress: job.progress,
+    error: job.error,
+    result: job.result,
+    createdAt: job.createdAt,
+    fileNames: job.fileNames,
+    usedFiles: job.usedFiles,
+    chunksProcessed: job.chunksProcessed,
+    totalChunks: job.totalChunks,
+    successCount: job.successCount,
+    errorCount: job.errorCount,
+    skippedCount: job.skippedCount
+  });
   } catch (error: unknown) {
     console.error('Error fetching training job status:', error);
     res.status(500).json({ 
